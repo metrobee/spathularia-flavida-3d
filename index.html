@@ -183,7 +183,7 @@
           <span id="stageBadge" class="badge">Juveniilne (spiraalne heeliks)</span>
         </div>
         <p class="subtitle">
-          Juveniilsed eosed paisuvad küpsedes jämedamaks ja rulluvad spiraalist lahti sirgeteks varrasteks nagu pliiatsid topsis. Lohista hiirega 3D pööramiseks.
+          Mikroskoobifotode põhjal püstitatud hüpotees: spiraalselt põimunud eosed sirguvad küpsedes paralleelseteks kimpudeks. Lohista pööramiseks, näpuga/rulliga suumi.
         </p>
       </div>
 
@@ -197,7 +197,7 @@
     </div>
 
     <div class="viewport-wrap">
-      <canvas id="viewport3d"></canvas>
+      <canvas id="viewport3d" role="img" aria-label="Spathularia flavida eoskoti 3D mudel"></canvas>
 
       <div class="overlay-info">
         <div class="overlay-row">
@@ -231,6 +231,7 @@
 
       <span id="percentLabel" class="pct-label">0%</span>
     </div>
+    <p class="subtitle">Märkus: mudel on illustratiivne. Keerdude arv, eoste paksenemine ja 6+2 pakend on mudeli parameetrid, mitte mõõdetud andmed; küpsemisjärjestus on tõlgendus ühest preparaadist.</p>
   </div>
 
   <script>
@@ -273,9 +274,11 @@
       let lastMouseX = 0;
       let lastMouseY = 0;
 
+      let cssW = 0, cssH = 0, lastDpr = 0;
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
+        cssW = rect.width; cssH = rect.height; lastDpr = dpr;
         canvas.width = Math.max(1, Math.floor(rect.width * dpr));
         canvas.height = Math.max(1, Math.floor(rect.height * dpr));
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -283,16 +286,31 @@
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
 
+      const pointers = new Map();
+      let pinchStart = 0, pinchZoom = 1;
       canvas.addEventListener('pointerdown', (e) => {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+          const [a, b] = [...pointers.values()];
+          pinchStart = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+          pinchZoom = zoom;
+        }
         isDragging = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         topCupViewActive = false;
         updateButtonStyles();
-        canvas.setPointerCapture(e.pointerId);
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
       });
 
       canvas.addEventListener('pointermove', (e) => {
+        if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size >= 2) {
+          const [a, b] = [...pointers.values()];
+          const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+          zoom = Math.max(0.65, Math.min(1.8, pinchZoom * d / pinchStart));
+          return;
+        }
         if (!isDragging) return;
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
@@ -302,10 +320,14 @@
         targetRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotX + dy * 0.01));
       });
 
-      canvas.addEventListener('pointerup', (e) => {
-        isDragging = false;
-        canvas.releasePointerCapture(e.pointerId);
-      });
+      function endPointer(e) {
+        pointers.delete(e.pointerId);
+        if (pointers.size === 0) isDragging = false;
+        else { const p = [...pointers.values()][0]; lastMouseX = p.x; lastMouseY = p.y; }
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+      canvas.addEventListener('pointerup', endPointer);
+      canvas.addEventListener('pointercancel', endPointer);
 
       canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -347,7 +369,7 @@
       btnTopView.addEventListener('click', () => {
         topCupViewActive = !topCupViewActive;
         if (topCupViewActive) {
-          targetRotX = 1.18;
+          targetRotX = -1.18;
           targetRotY = 0.4;
         } else {
           targetRotX = -0.18;
@@ -455,11 +477,11 @@
 
         const diamMult = (1.0 + 0.95 * Math.pow(maturity, 0.85)).toFixed(1);
         if (maturity < 0.25) {
-          massValue.textContent = `${diamMult}× (tihe põiming, tühimikuta)`;
+          massValue.textContent = `${diamMult}× (tihe põiming)`;
         } else if (maturity < 0.78) {
           massValue.textContent = `${diamMult}× (paisuv, täidab koti)`;
         } else {
-          massValue.textContent = `${diamMult}× (100% täidetud tuub)`;
+          massValue.textContent = `${diamMult}× (tihedalt täidetud tuub)`;
         }
 
         const modeNames = [
@@ -471,13 +493,13 @@
         const modeDesc = modeNames[sporePackingMode] || modeNames[0];
         if (maturity < 0.3) {
           stageBadge.textContent = 'Juveniilne (tihe 3D põiming)';
-          shapeValue.textContent = `Tühimikuta (${modeDesc})`;
+          shapeValue.textContent = `Tihe põiming (${modeDesc})`;
         } else if (maturity < 0.78) {
           stageBadge.textContent = 'Paisumine ja lahtirullumine';
           shapeValue.textContent = `Massi kasv (${modeDesc})`;
         } else {
-          stageBadge.textContent = 'Küps eoskott (tihe 6+2 kimp)';
-          shapeValue.textContent = `Täidetud tuub (2 keskel + 6 ümber)`;
+          stageBadge.textContent = 'Küps eoskott (paralleelne kimp)';
+          shapeValue.textContent = `Paralleelne kimp (${modeDesc})`;
         }
       }
 
@@ -618,15 +640,15 @@
           }
         }
 
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
+        const rectNow = canvas.getBoundingClientRect();
+        if (rectNow.width !== cssW || rectNow.height !== cssH || (window.devicePixelRatio || 1) !== lastDpr) {
+          resizeCanvas();
+        }
+        const width = cssW;
+        const height = cssH;
         if (width < 40 || height < 40) {
           requestAnimationFrame(render);
           return;
-        }
-        const dpr = window.devicePixelRatio || 1;
-        if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
-          resizeCanvas();
         }
 
         ctx.clearRect(0, 0, width, height);
@@ -688,10 +710,12 @@
             const z3d = pos2d.nz * maxOuterCenterR;
 
             const proj = project3D(x3d, y3d, z3d, cx, cy, zoom);
+            const axisZ = project3D(0, y3d, 0, cx, cy, zoom).z;
+            proj.rel = Math.max(-1, Math.min(1, (proj.z - axisZ) / Math.max(4, lumenR)));
             proj.thickness = Math.max(1.1, baseThickness * proj.persp);
 
             if (prevProj) {
-              const isSeptum = (maturity > 0.45) && (s > 6 && s < segmentsPerSpore - 6) && (s % 9 === 0);
+              const isSeptum = (s > 6 && s < segmentsPerSpore - 6) && (s % 9 === 0);
               primitives.push({
                 type: 'sporeSeg',
                 sporeIdx: k,
@@ -699,6 +723,7 @@
                 p1: prevProj,
                 p2: proj,
                 z: (prevProj.z + proj.z) * 0.5,
+                rel: (prevProj.rel + proj.rel) * 0.5,
                 isSeptum: isSeptum
               });
             }
@@ -715,7 +740,7 @@
 
           if (item.type === 'sporeSeg') {
             const { p1, p2, sporeIdx, isSeptum } = item;
-            const depthNorm = Math.max(0, Math.min(1, (item.z + 20) / 40));
+            const depthNorm = Math.max(0, Math.min(1, 0.5 + 0.5 * item.rel));
             let alpha = (highlightSingleSpore && sporeIdx !== 0) ? 0.16 : 0.96;
 
             if (microscopeMode) {
@@ -774,7 +799,7 @@
               }
 
               if (isSeptum && alpha > 0.3) {
-                const septOpacity = Math.min(1, (maturity - 0.45) / 0.4) * alpha * 0.75;
+                const septOpacity = (0.35 + 0.4 * maturity) * alpha;
                 const dx = p2.sx - p1.sx;
                 const dy = p2.sy - p1.sy;
                 const len = Math.hypot(dx, dy) || 1;
@@ -808,8 +833,9 @@
         const axX = botPt.sx - topPt.sx;
         const axY = botPt.sy - topPt.sy;
         const axLen = Math.hypot(axX, axY) || 1;
-        const perpX = -axY / axLen;
-        const perpY = axX / axLen;
+        const axisDegenerate = Math.hypot(axX, axY) < 3;
+        const perpX = axisDegenerate ? 1 : -axY / axLen;
+        const perpY = axisDegenerate ? 0 : axX / axLen;
 
         for (let i = 0; i <= steps; i++) {
           const u = Math.sin((i / steps) * Math.PI * 0.5);
