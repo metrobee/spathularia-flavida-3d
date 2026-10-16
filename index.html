@@ -651,20 +651,20 @@
         const ascusLength = 220 + 26 * maturity;
         const uncoil = Math.pow(1.0 - maturity, 1.65);
         const totalTwistRadians = 3.2 * Math.PI * 2 * uncoil;
-        const sporeStartU = 0.07 - 0.015 * maturity;
-        const sporeEndU = 0.915 + 0.015 * maturity;
+        const sporeStartU = 0.024 - 0.004 * maturity;
+        const sporeEndU = 0.984 + 0.004 * maturity;
 
         const numSpores = 8;
-        const segmentsPerSpore = 76;
+        const segmentsPerSpore = 84;
         const primitives = [];
 
         for (let k = 0; k < numSpores; k++) {
           let prevProj = null;
 
           const isCentralSlot = (k >= 6);
-          const staggerRank = isCentralSlot ? 0.0 : ((k % 3) + 0.55) / 3.0;
-          const staggerAmt = (sporePackingMode === 1 ? 0.042 : 0.026);
-          const kStartU = (sporeStartU + 0.010) - staggerRank * (staggerAmt * 0.6);
+          const staggerRank = isCentralSlot ? 0.0 : ((k % 3) + 0.4) / 3.0;
+          const staggerAmt = (sporePackingMode === 1 ? 0.016 : 0.012);
+          const kStartU = sporeStartU + (1.0 - staggerRank) * 0.006;
           const kEndU = sporeEndU - staggerRank * staggerAmt;
 
           for (let s = 0; s <= segmentsPerSpore; s++) {
@@ -673,15 +673,15 @@
             const y3d = (0.5 - u) * ascusLength;
 
             const ascusR = getAscusRadius(u, maturity);
-            const wallThickness = 1.1;
-            const lumenR = Math.max(1.8, ascusR - wallThickness);
+            const wallThickness = 1.05;
+            const lumenR = Math.max(1.6, ascusR - wallThickness);
 
-            const tipFactor = Math.pow(Math.sin(frac * Math.PI), 0.30);
-            const swellMassFactor = 0.92 + 0.16 * Math.pow(maturity, 0.85);
-            const baseThickness = (lumenR * 0.44 * swellMassFactor) * tipFactor;
+            const tipFactor = Math.pow(Math.sin(frac * Math.PI), 0.12);
+            const swellMassFactor = 0.95 + 0.16 * Math.pow(maturity, 0.85);
+            const baseThickness = Math.max(2.2, lumenR * 0.47 * swellMassFactor) * tipFactor;
             const sporeRadius3D = baseThickness * 0.5;
 
-            const maxOuterCenterR = Math.max(0.4, lumenR - sporeRadius3D * 0.82);
+            const maxOuterCenterR = Math.max(0.25, lumenR - sporeRadius3D * 0.78);
 
             const pos2d = getSporeCrossSectionPos(k, frac, totalTwistRadians, uncoil);
             const x3d = pos2d.nx * maxOuterCenterR;
