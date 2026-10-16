@@ -506,29 +506,10 @@
 
       function getAscusRadius(u, m) {
         const swell = 1.0 + 0.14 * m;
-        if (u < 0.34) {
-          const t = u / 0.34;
-          return (5.8 + 5.0 * Math.pow(t, 1.25)) * swell;
-        } else if (u < 0.73) {
-          const t = (u - 0.34) / 0.39;
-          const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-          return (10.8 + 7.2 * ease) * swell;
-        } else if (u < 0.84) {
-          const t = (u - 0.73) / 0.11;
-          const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-          return (18.0 - 2.2 * ease) * swell;
-        } else if (u < 0.922) {
-          const t = (u - 0.84) / 0.082;
-          const sCurve = 0.5 - 0.5 * Math.cos(t * Math.PI);
-          return (15.8 - 9.1 * sCurve) * swell;
-        } else if (u < 0.978) {
-          const t = (u - 0.922) / 0.056;
-          const nippleBulge = 0.45 * Math.sin(t * Math.PI);
-          return (6.7 - 1.2 * t + nippleBulge) * swell;
-        } else {
-          const t = (u - 0.978) / 0.022;
-          return (5.5 * Math.cos(t * Math.PI * 0.45)) * swell;
-        }
+        const uc = Math.max(0, Math.min(1, u));
+        const apexDome = Math.sqrt(Math.max(0, 1.0 - Math.pow(uc, 8.0)));
+        const stalkAndClub = 5.8 * (1.0 - 0.35 * uc * uc) + 11.8 * Math.sin(Math.pow(uc, 1.60) * Math.PI);
+        return apexDome * stalkAndClub * swell;
       }
 
       const sporePalette = [
@@ -677,56 +658,14 @@
         const segmentsPerSpore = 76;
         const primitives = [];
 
-        const paraphysesConfigs = [
-          { baseAngle: -2.3, dist: 30, heightScale: 1.04, curlDir: 1, phase: 0.2 },
-          { baseAngle: -1.1, dist: 33, heightScale: 0.98, curlDir: -1, phase: 1.4 },
-          { baseAngle: 0.9,  dist: 32, heightScale: 1.05, curlDir: 1, phase: 2.7 },
-          { baseAngle: 2.2,  dist: 29, heightScale: 0.96, curlDir: -1, phase: 4.1 }
-        ];
-
-        paraphysesConfigs.forEach((pCfg) => {
-          const pSegs = 40;
-          const sway = Math.sin(now * 0.0012 + pCfg.phase) * 2.2;
-          let prevPt = null;
-          for (let i = 0; i <= pSegs; i++) {
-            const u = i / pSegs;
-            let py = (0.5 - u) * ascusLength * pCfg.heightScale;
-            let r = pCfg.dist + Math.sin(u * Math.PI * 2 + pCfg.phase) * 3.5 + sway * u;
-            let ang = pCfg.baseAngle + Math.sin(u * Math.PI * 1.5) * 0.15;
-
-            if (u > 0.78) {
-              const tipT = (u - 0.78) / 0.22;
-              const curlAngle = tipT * Math.PI * 1.65 * pCfg.curlDir;
-              r += Math.sin(curlAngle) * 10;
-              py -= (1 - Math.cos(curlAngle)) * 8;
-              ang += tipT * 0.6 * pCfg.curlDir;
-            }
-
-            const px = Math.cos(ang) * r;
-            const pz = Math.sin(ang) * r;
-            const proj = project3D(px, py, pz, cx, cy, zoom);
-
-            if (prevPt) {
-              primitives.push({
-                type: 'paraphysis',
-                p1: prevPt,
-                p2: proj,
-                z: (prevPt.z + proj.z) * 0.5,
-                u: u
-              });
-            }
-            prevPt = proj;
-          }
-        });
-
         for (let k = 0; k < numSpores; k++) {
           let prevProj = null;
 
           const isCentralSlot = (k >= 6);
           const staggerRank = isCentralSlot ? 0.0 : ((k % 3) + 0.55) / 3.0;
-          const staggerAmt = (sporePackingMode === 1 ? 0.052 : 0.036);
-          const kStartU = (sporeStartU + 0.015) - staggerRank * (staggerAmt * 0.65);
-          const kEndU = (sporeEndU + 0.024) - staggerRank * staggerAmt;
+          const staggerAmt = (sporePackingMode === 1 ? 0.046 : 0.028);
+          const kStartU = (sporeStartU + 0.012) - staggerRank * (staggerAmt * 0.6);
+          const kEndU = (sporeEndU + 0.015) - staggerRank * staggerAmt;
 
           for (let s = 0; s <= segmentsPerSpore; s++) {
             const frac = s / segmentsPerSpore;
@@ -735,15 +674,14 @@
 
             const ascusR = getAscusRadius(u, maturity);
             const wallThickness = 1.1;
-            const lumenR = Math.max(2.0, ascusR - wallThickness);
+            const lumenR = Math.max(1.8, ascusR - wallThickness);
 
-            const tipFactor = Math.pow(Math.sin(frac * Math.PI), 0.28);
+            const tipFactor = Math.pow(Math.sin(frac * Math.PI), 0.30);
             const swellMassFactor = 0.92 + 0.16 * Math.pow(maturity, 0.85);
             const baseThickness = (lumenR * 0.44 * swellMassFactor) * tipFactor;
             const sporeRadius3D = baseThickness * 0.5;
 
-            const nippleTaper = (u > 0.90) ? Math.max(0.25, 1.0 - (u - 0.90) * 7.5) : 1.0;
-            const maxOuterCenterR = Math.max(0.6, (lumenR - sporeRadius3D * 0.80) * nippleTaper);
+            const maxOuterCenterR = Math.max(0.4, lumenR - sporeRadius3D * 0.82);
 
             const pos2d = getSporeCrossSectionPos(k, frac, totalTwistRadians, uncoil);
             const x3d = pos2d.nx * maxOuterCenterR;
@@ -768,36 +706,6 @@
           }
         }
 
-        const wallRings = 48;
-        const ringPts = 24;
-        for (let rIdx = 0; rIdx <= wallRings; rIdx++) {
-          const u = rIdx / wallRings;
-          const y3d = (0.5 - u) * ascusLength;
-          const rad = getAscusRadius(u, maturity);
-
-          const isNippleNeck = (rIdx === 44);
-          const isNippleTip = (rIdx === 47);
-
-          if (rIdx % 6 === 0 || isNippleNeck || isNippleTip) {
-            const pts = [];
-            for (let j = 0; j <= ringPts; j++) {
-              const a = (j / ringPts) * Math.PI * 2;
-              const p = project3D(Math.cos(a) * rad, y3d, Math.sin(a) * rad, cx, cy, zoom);
-              pts.push(p);
-            }
-            for (let j = 0; j < ringPts; j++) {
-              primitives.push({
-                type: 'ascusRingSeg',
-                p1: pts[j],
-                p2: pts[j + 1],
-                z: (pts[j].z + pts[j + 1].z) * 0.5,
-                isApicalPore: isNippleTip || isNippleNeck,
-                u: u
-              });
-            }
-          }
-        }
-
         primitives.sort((a, b) => a.z - b.z);
 
         drawAscusEnvelope(cx, cy, ascusLength, true);
@@ -805,29 +713,7 @@
         for (let i = 0; i < primitives.length; i++) {
           const item = primitives[i];
 
-          if (item.type === 'paraphysis') {
-            ctx.beginPath();
-            ctx.moveTo(item.p1.sx, item.p1.sy);
-            ctx.lineTo(item.p2.sx, item.p2.sy);
-            ctx.lineWidth = Math.max(1.2, 2.1 * item.p1.persp);
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = microscopeMode ? 'rgba(130, 140, 118, 0.55)' : 'rgba(148, 163, 184, 0.28)';
-            ctx.stroke();
-          } else if (item.type === 'ascusRingSeg') {
-            ctx.beginPath();
-            ctx.moveTo(item.p1.sx, item.p1.sy);
-            ctx.lineTo(item.p2.sx, item.p2.sy);
-            if (item.isApicalPore) {
-              ctx.lineWidth = 1.6;
-              ctx.strokeStyle = microscopeMode ? 'rgba(110, 120, 105, 0.65)' : 'rgba(52, 211, 153, 0.52)';
-            } else {
-              ctx.lineWidth = 0.75;
-              const frontness = Math.max(0, (item.z + 22) / 44);
-              const alpha = 0.05 + 0.12 * frontness;
-              ctx.strokeStyle = microscopeMode ? `rgba(115, 125, 110, ${alpha})` : `rgba(148, 163, 184, ${alpha})`;
-            }
-            ctx.stroke();
-          } else if (item.type === 'sporeSeg') {
+          if (item.type === 'sporeSeg') {
             const { p1, p2, sporeIdx, isSeptum } = item;
             const depthNorm = Math.max(0, Math.min(1, (item.z + 20) / 40));
             let alpha = (highlightSingleSpore && sporeIdx !== 0) ? 0.16 : 0.96;
@@ -913,7 +799,7 @@
       }
 
       function drawAscusEnvelope(cx, cy, ascusLength, isBackPass) {
-        const steps = 80;
+        const steps = 120;
         const leftEdge = [];
         const rightEdge = [];
 
@@ -926,7 +812,7 @@
         const perpY = axX / axLen;
 
         for (let i = 0; i <= steps; i++) {
-          const u = i / steps;
+          const u = Math.sin((i / steps) * Math.PI * 0.5);
           const y3d = (0.5 - u) * ascusLength;
           const r = getAscusRadius(u, maturity);
           const centerProj = project3D(0, y3d, 0, cx, cy, zoom);
@@ -945,14 +831,13 @@
         ctx.beginPath();
         ctx.moveTo(leftEdge[0].x, leftEdge[0].y);
         for (let i = 1; i <= steps; i++) ctx.lineTo(leftEdge[i].x, leftEdge[i].y);
-
-        const topLeft = leftEdge[steps];
-        const topRight = rightEdge[steps];
-        const midTopX = (topLeft.x + topRight.x) * 0.5 - (axX / axLen) * 3.5 * zoom;
-        const midTopY = (topLeft.y + topRight.y) * 0.5 - (axY / axLen) * 3.5 * zoom;
-        ctx.quadraticCurveTo(midTopX, midTopY, topRight.x, topRight.y);
-
         for (let i = steps - 1; i >= 0; i--) ctx.lineTo(rightEdge[i].x, rightEdge[i].y);
+
+        const botLeft = leftEdge[0];
+        const botRight = rightEdge[0];
+        const midBotX = (botLeft.x + botRight.x) * 0.5 + (axX / axLen) * 3.0 * zoom;
+        const midBotY = (botLeft.y + botRight.y) * 0.5 + (axY / axLen) * 3.0 * zoom;
+        ctx.quadraticCurveTo(midBotX, midBotY, botLeft.x, botLeft.y);
         ctx.closePath();
 
         if (isBackPass) {
@@ -960,6 +845,8 @@
           ctx.fill();
         } else {
           ctx.lineWidth = microscopeMode ? 2.2 : 1.8;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
           ctx.strokeStyle = microscopeMode ? 'rgba(105, 114, 100, 0.78)' : 'rgba(148, 163, 184, 0.48)';
           ctx.stroke();
         }
