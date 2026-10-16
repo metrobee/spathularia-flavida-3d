@@ -507,9 +507,9 @@
       function getAscusRadius(u, m) {
         const swell = 1.0 + 0.14 * m;
         const uc = Math.max(0, Math.min(1, u));
-        const apexDome = Math.sqrt(Math.max(0, 1.0 - Math.pow(uc, 8.0)));
-        const stalkAndClub = 5.8 * (1.0 - 0.35 * uc * uc) + 11.8 * Math.sin(Math.pow(uc, 1.60) * Math.PI);
-        return apexDome * stalkAndClub * swell;
+        const clavateBody = (6.2 * (1.0 - uc) + 25.4 * Math.pow(uc, 1.15)) * Math.sqrt(Math.max(0, 1.0 - Math.pow(uc, 2.8)));
+        const subtleNipple = 0.75 * Math.exp(-Math.pow((uc - 0.965) / 0.032, 2)) * Math.sqrt(Math.max(0, 1.0 - uc));
+        return (clavateBody + subtleNipple) * swell;
       }
 
       const sporePalette = [
@@ -651,8 +651,8 @@
         const ascusLength = 220 + 26 * maturity;
         const uncoil = Math.pow(1.0 - maturity, 1.65);
         const totalTwistRadians = 3.2 * Math.PI * 2 * uncoil;
-        const sporeStartU = 0.08 - 0.02 * maturity;
-        const sporeEndU = 0.94 + 0.02 * maturity;
+        const sporeStartU = 0.07 - 0.015 * maturity;
+        const sporeEndU = 0.915 + 0.015 * maturity;
 
         const numSpores = 8;
         const segmentsPerSpore = 76;
@@ -663,9 +663,9 @@
 
           const isCentralSlot = (k >= 6);
           const staggerRank = isCentralSlot ? 0.0 : ((k % 3) + 0.55) / 3.0;
-          const staggerAmt = (sporePackingMode === 1 ? 0.046 : 0.028);
-          const kStartU = (sporeStartU + 0.012) - staggerRank * (staggerAmt * 0.6);
-          const kEndU = (sporeEndU + 0.015) - staggerRank * staggerAmt;
+          const staggerAmt = (sporePackingMode === 1 ? 0.042 : 0.026);
+          const kStartU = (sporeStartU + 0.010) - staggerRank * (staggerAmt * 0.6);
+          const kEndU = sporeEndU - staggerRank * staggerAmt;
 
           for (let s = 0; s <= segmentsPerSpore; s++) {
             const frac = s / segmentsPerSpore;
