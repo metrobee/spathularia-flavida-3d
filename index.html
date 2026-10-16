@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spathularia flavida — Eoskoti ja eoste 3D areng</title>
+  <style>
+    :root {
+      --bg: #0b1016;
+      --card: #131c26;
+      --border: #263547;
+      --fg: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #10b981;
+      --primary-fg: #042f2e;
+      --secondary: #1e293b;
+      --secondary-fg: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 960px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--secondary);
+      color: var(--secondary-fg);
+      border: 1px solid var(--border);
+    }
+    .subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .controls-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    button {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--secondary);
+      color: var(--secondary-fg);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button:hover { opacity: 0.9; }
+    button.active, button.primary {
+      background: var(--primary);
+      color: var(--primary-fg);
+      border-color: transparent;
+      font-weight: 600;
+    }
+    .viewport-wrap {
+      position: relative;
+      width: 100%;
+      height: 460px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    canvas:active { cursor: grabbing; }
+    .overlay-info {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      pointer-events: none;
+      background: rgba(19, 28, 38, 0.86);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .overlay-row {
+      display: flex;
+      gap: 8px;
+    }
+    .overlay-label { font-weight: 600; color: var(--fg); }
+    .overlay-val { color: var(--muted); font-family: ui-monospace, monospace; }
+    .reset-btn {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(19, 28, 38, 0.86);
+      backdrop-filter: blur(6px);
+    }
+    .timeline-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 220px;
+    }
+    .slider-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .pct-label {
+      font-size: 0.8rem;
+      font-family: ui-monospace, monospace;
+      color: var(--muted);
+      width: 44px;
+      text-align: right;
+    }
+    @media (max-width: 640px) {
+      .viewport-wrap { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title-row">
+          <h1><em>Spathularia flavida</em> eoskoti 3D mudel</h1>
+          <span id="stageBadge" class="badge">Juveniilne (spiraalne heeliks)</span>
+        </div>
+        <p class="subtitle">
+          Juveniilsed eosed paisuvad küpsedes jämedamaks ja rulluvad spiraalist lahti sirgeteks varrasteks nagu pliiatsid topsis. Lohista hiirega 3D pööramiseks.
+        </p>
+      </div>
+
+      <div class="controls-top">
+        <button id="btnSporeCount">8 eost (6 väljas + 2 sees)</button>
+        <button id="btnHighlightOne">Jälgi 1 eost</button>
+        <button id="btnColorMode">Mikroskoobi fookus</button>
+        <button id="btnTopView">Vaade ülalt (Pliiatsitops)</button>
+        <button id="btnRecordVideo" class="primary">🎥 Salvesta video</button>
+      </div>
+    </div>
+
+    <div class="viewport-wrap">
+      <canvas id="viewport3d"></canvas>
+
+      <div class="overlay-info">
+        <div class="overlay-row">
+          <span class="overlay-label">Keerdumus:</span>
+          <span id="twistValue" class="overlay-val">3.2 pööret</span>
+        </div>
+        <div class="overlay-row">
+          <span class="overlay-label">Jämedus / mass:</span>
+          <span id="massValue" class="overlay-val">1.0× (peenike)</span>
+        </div>
+        <div class="overlay-row">
+          <span class="overlay-label">Eoste kuju:</span>
+          <span id="shapeValue" class="overlay-val" style="font-family: inherit;">Peenikesed "ussikesed"</span>
+        </div>
+      </div>
+
+      <button id="btnResetCam" class="reset-btn">Lähtesta vaade</button>
+    </div>
+
+    <div class="timeline-bar">
+      <button id="btnPlayPause" class="primary">
+        <span id="playIcon">⏸</span>
+        <span id="playText">Peata animatsioon</span>
+      </button>
+
+      <div class="slider-wrap">
+        <span class="slider-label">Juveniilne (heeliks)</span>
+        <input id="maturitySlider" type="range" min="0" max="1000" value="0" />
+        <span class="slider-label">Küps (pliiatsid tuubis)</span>
+      </div>
+
+      <span id="percentLabel" class="pct-label">0%</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('viewport3d');
+      const ctx = canvas.getContext('2d');
+
+      const slider = document.getElementById('maturitySlider');
+      const btnPlayPause = document.getElementById('btnPlayPause');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const percentLabel = document.getElementById('percentLabel');
+      const stageBadge = document.getElementById('stageBadge');
+      const twistValue = document.getElementById('twistValue');
+      const massValue = document.getElementById('massValue');
+      const shapeValue = document.getElementById('shapeValue');
+      const btnSporeCount = document.getElementById('btnSporeCount');
+      const btnHighlightOne = document.getElementById('btnHighlightOne');
+      const btnColorMode = document.getElementById('btnColorMode');
+      const btnTopView = document.getElementById('btnTopView');
+      const btnRecordVideo = document.getElementById('btnRecordVideo');
+      const btnResetCam = document.getElementById('btnResetCam');
+
+      let maturity = 0.0;
+      let isPlaying = true;
+      let animDirection = 1;
+      let pauseHoldTimer = 0;
+      let sporePackingMode = 0;
+      let highlightSingleSpore = false;
+      let microscopeMode = false;
+      let topCupViewActive = false;
+
+      let rotY = 0.35;
+      let rotX = -0.18;
+      let targetRotY = 0.35;
+      let targetRotX = -0.18;
+      let zoom = 1.15;
+
+      let isDragging = false;
+      let lastMouseX = 0;
+      let lastMouseY = 0;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      canvas.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        topCupViewActive = false;
+        updateButtonStyles();
+        canvas.setPointerCapture(e.pointerId);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        targetRotY += dx * 0.01;
+        targetRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotX + dy * 0.01));
+      });
+
+      canvas.addEventListener('pointerup', (e) => {
+        isDragging = false;
+        canvas.releasePointerCapture(e.pointerId);
+      });
+
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        zoom = Math.max(0.65, Math.min(1.8, zoom - e.deltaY * 0.001));
+      }, { passive: false });
+
+      slider.addEventListener('input', () => {
+        maturity = parseFloat(slider.value) / 1000;
+        isPlaying = false;
+        updatePlayUI();
+        updateLabels();
+      });
+
+      btnPlayPause.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        if (isPlaying && maturity >= 0.99) {
+          maturity = 0;
+          animDirection = 1;
+        }
+        updatePlayUI();
+      });
+
+      btnSporeCount.addEventListener('click', () => {
+        sporePackingMode = (sporePackingMode + 1) % 4;
+        updateButtonStyles();
+        updateLabels();
+      });
+
+      btnHighlightOne.addEventListener('click', () => {
+        highlightSingleSpore = !highlightSingleSpore;
+        updateButtonStyles();
+      });
+
+      btnColorMode.addEventListener('click', () => {
+        microscopeMode = !microscopeMode;
+        updateButtonStyles();
+      });
+
+      btnTopView.addEventListener('click', () => {
+        topCupViewActive = !topCupViewActive;
+        if (topCupViewActive) {
+          targetRotX = 1.18;
+          targetRotY = 0.4;
+        } else {
+          targetRotX = -0.18;
+          targetRotY = 0.35;
+        }
+        updateButtonStyles();
+      });
+
+      btnResetCam.addEventListener('click', () => {
+        topCupViewActive = false;
+        targetRotX = -0.18;
+        targetRotY = 0.35;
+        zoom = 1.15;
+        updateButtonStyles();
+      });
+
+      let isRecording = false;
+      btnRecordVideo.addEventListener('click', () => {
+        if (isRecording) return;
+        try {
+          const stream = canvas.captureStream(60);
+          const mimeTypes = [
+            'video/mp4;codecs=avc1',
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm'
+          ];
+          const mimeType = mimeTypes.find((t) => MediaRecorder.isTypeSupported(t)) || '';
+          const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 5000000 } : {});
+          const chunks = [];
+
+          recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+          };
+
+          recorder.onstop = () => {
+            isRecording = false;
+            btnRecordVideo.textContent = '🎥 Salvesta video';
+            const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+            const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `spathularia_flavida_3d.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          };
+
+          isRecording = true;
+          maturity = 0.0;
+          animDirection = 1;
+          pauseHoldTimer = 0.4;
+          isPlaying = true;
+          updatePlayUI();
+
+          recorder.start();
+          let secLeft = 8;
+          btnRecordVideo.textContent = `⏺ Salvestab (${secLeft}s)...`;
+          const timer = setInterval(() => {
+            secLeft--;
+            if (secLeft > 0) {
+              btnRecordVideo.textContent = `⏺ Salvestab (${secLeft}s)...`;
+            } else {
+              clearInterval(timer);
+              if (recorder.state === 'recording') recorder.stop();
+            }
+          }, 1000);
+        } catch (err) {
+          btnRecordVideo.textContent = 'Salvestamine ebaõnnestus';
+          isRecording = false;
+        }
+      });
+
+      function updatePlayUI() {
+        playIcon.textContent = isPlaying ? '⏸' : '▶';
+        playText.textContent = isPlaying ? 'Peata animatsioon' : 'Käivita animatsioon';
+      }
+
+      function updateButtonStyles() {
+        if (sporePackingMode === 0) {
+          btnSporeCount.textContent = 'Heeliks: 3D-pats (sise↔välis)';
+        } else if (sporePackingMode === 1) {
+          btnSporeCount.textContent = 'Heeliks: Tihe köis + astmeline';
+        } else if (sporePackingMode === 2) {
+          btnSporeCount.textContent = 'Heeliks: S-laine / Korgitser';
+        } else {
+          btnSporeCount.textContent = 'Heeliks: Tihe 4+4 keskpõiming';
+        }
+        btnSporeCount.classList.toggle('active', sporePackingMode !== 0);
+        btnHighlightOne.classList.toggle('active', highlightSingleSpore);
+        btnColorMode.classList.toggle('active', microscopeMode);
+        btnTopView.classList.toggle('active', topCupViewActive);
+      }
+
+      function updateLabels() {
+        const pct = Math.round(maturity * 100);
+        percentLabel.textContent = `${pct}%`;
+        slider.value = Math.round(maturity * 1000);
+
+        const uncoilFactor = Math.pow(1 - maturity, 1.65);
+        const turns = (3.2 * uncoilFactor).toFixed(1);
+        twistValue.textContent = `${turns} pööret`;
+
+        const diamMult = (1.0 + 0.95 * Math.pow(maturity, 0.85)).toFixed(1);
+        if (maturity < 0.25) {
+          massValue.textContent = `${diamMult}× (tihe põiming, tühimikuta)`;
+        } else if (maturity < 0.78) {
+          massValue.textContent = `${diamMult}× (paisuv, täidab koti)`;
+        } else {
+          massValue.textContent = `${diamMult}× (100% täidetud tuub)`;
+        }
+
+        const modeNames = [
+          '3D-pats: sise↔välis',
+          'tihe köis + astmeline',
+          'S-laine korgitser',
+          'tihe 4+4 keskpõiming'
+        ];
+        const modeDesc = modeNames[sporePackingMode] || modeNames[0];
+        if (maturity < 0.3) {
+          stageBadge.textContent = 'Juveniilne (tihe 3D põiming)';
+          shapeValue.textContent = `Tühimikuta (${modeDesc})`;
+        } else if (maturity < 0.78) {
+          stageBadge.textContent = 'Paisumine ja lahtirullumine';
+          shapeValue.textContent = `Massi kasv (${modeDesc})`;
+        } else {
+          stageBadge.textContent = 'Küps eoskott (tihe 6+2 kimp)';
+          shapeValue.textContent = `Täidetud tuub (2 keskel + 6 ümber)`;
+        }
+      }
+
+      function project3D(x, y, z, cx, cy, scale) {
+        const cosY = Math.cos(rotY);
+        const sinY = Math.sin(rotY);
+        const x1 = x * cosY - z * sinY;
+        const z1 = x * sinY + z * cosY;
+
+        const cosX = Math.cos(rotX);
+        const sinX = Math.sin(rotX);
+        const y2 = y * cosX - z1 * sinX;
+        const z2 = y * sinX + z1 * cosX;
+
+        const fov = 520;
+        const viewerDist = 420;
+        const persp = fov / Math.max(80, viewerDist - z2);
+
+        return {
+          sx: cx + x1 * scale * persp,
+          sy: cy + y2 * scale * persp,
+          z: z2,
+          persp: persp * scale
+        };
+      }
+
+      function getAscusRadius(u, m) {
+        const swell = 1.0 + 0.14 * m;
+        if (u < 0.34) {
+          const t = u / 0.34;
+          return (5.8 + 5.0 * Math.pow(t, 1.25)) * swell;
+        } else if (u < 0.73) {
+          const t = (u - 0.34) / 0.39;
+          const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
+          return (10.8 + 7.2 * ease) * swell;
+        } else if (u < 0.84) {
+          const t = (u - 0.73) / 0.11;
+          const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
+          return (18.0 - 2.2 * ease) * swell;
+        } else if (u < 0.922) {
+          const t = (u - 0.84) / 0.082;
+          const sCurve = 0.5 - 0.5 * Math.cos(t * Math.PI);
+          return (15.8 - 9.1 * sCurve) * swell;
+        } else if (u < 0.978) {
+          const t = (u - 0.922) / 0.056;
+          const nippleBulge = 0.45 * Math.sin(t * Math.PI);
+          return (6.7 - 1.2 * t + nippleBulge) * swell;
+        } else {
+          const t = (u - 0.978) / 0.022;
+          return (5.5 * Math.cos(t * Math.PI * 0.45)) * swell;
+        }
+      }
+
+      const sporePalette = [
+        { h: 152, s: 72, l: 48 },
+        { h: 168, s: 68, l: 46 },
+        { h: 135, s: 62, l: 50 },
+        { h: 88,  s: 62, l: 48 },
+        { h: 185, s: 68, l: 47 },
+        { h: 115, s: 58, l: 48 },
+        { h: 160, s: 65, l: 44 },
+        { h: 72,  s: 64, l: 47 }
+      ];
+
+      function getClosePackedTarget(k, localSpin) {
+        if (k < 6) {
+          const a = (k / 6) * Math.PI * 2 + localSpin;
+          return { nx: Math.cos(a) * 0.96, nz: Math.sin(a) * 0.96 };
+        } else {
+          const a = ((k - 6) / 2) * Math.PI * 2 + 0.45 + localSpin;
+          return { nx: Math.cos(a) * 0.34, nz: Math.sin(a) * 0.34 };
+        }
+      }
+
+      function getSporeCrossSectionPos(k, frac, totalTwistRadians, uncoil) {
+        const twistOffset = (frac - 0.5) * totalTwistRadians;
+
+        if (sporePackingMode === 0) {
+          const braidPhase = (k * Math.PI * 0.5) + (frac - 0.5) * Math.PI * 3.0 * uncoil;
+          const radialWave = 0.5 - 0.5 * Math.cos(braidPhase);
+          const rBraid = 0.32 + 0.68 * Math.pow(radialWave, 0.72);
+          const thetaBraid = (k / 8) * Math.PI * 2 + twistOffset + 0.16 * Math.sin(braidPhase) * uncoil;
+
+          const braidNx = Math.cos(thetaBraid) * rBraid;
+          const braidNz = Math.sin(thetaBraid) * rBraid;
+
+          const pack = getClosePackedTarget(k, twistOffset * 0.4);
+          const blend = Math.min(1, uncoil * 1.35);
+          return {
+            nx: blend * braidNx + (1 - blend) * pack.nx,
+            nz: blend * braidNz + (1 - blend) * pack.nz
+          };
+        } else if (sporePackingMode === 1) {
+          if (k < 6) {
+            const a = (k / 6) * Math.PI * 2 + twistOffset;
+            const r = 0.95;
+            return { nx: Math.cos(a) * r, nz: Math.sin(a) * r };
+          } else {
+            const innerTwist = twistOffset * 1.85;
+            const a = ((k - 6) * Math.PI) + innerTwist;
+            const r = 0.35 + 0.08 * uncoil * Math.sin(frac * Math.PI * 4);
+            return { nx: Math.cos(a) * r, nz: Math.sin(a) * r };
+          }
+        } else if (sporePackingMode === 2) {
+          const waveTheta = twistOffset * 1.15;
+          const waveR = 0.38 * uncoil;
+          const bx = Math.cos(waveTheta) * waveR;
+          const bz = Math.sin(waveTheta) * waveR * 0.65;
+
+          const pack = getClosePackedTarget(k, twistOffset * 0.45);
+          const bundleScale = 1.0 - 0.32 * uncoil;
+          return {
+            nx: bx + pack.nx * bundleScale,
+            nz: bz + pack.nz * bundleScale
+          };
+        } else {
+          const group = k % 2;
+          const idxInGroup = Math.floor(k / 2);
+          const swapWave = 0.5 + 0.5 * Math.sin((frac - 0.5) * Math.PI * 2.5 * uncoil + group * Math.PI);
+          const r4 = (0.33 + 0.63 * swapWave) * uncoil + (1 - uncoil) * (group === 0 ? 0.42 : 0.95);
+          const a = (idxInGroup / 4) * Math.PI * 2 + group * (Math.PI / 4) + twistOffset;
+          return {
+            nx: Math.cos(a) * r4,
+            nz: Math.sin(a) * r4
+          };
+        }
+      }
+
+      let lastTime = performance.now();
+
+      function render(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        rotY += (targetRotY - rotY) * 0.14;
+        rotX += (targetRotX - rotX) * 0.14;
+
+        if (!isDragging && !topCupViewActive) {
+          targetRotY += dt * 0.22;
+        }
+
+        if (isPlaying) {
+          if (pauseHoldTimer > 0) {
+            pauseHoldTimer -= dt;
+          } else {
+            maturity += animDirection * dt * 0.17;
+            if (maturity >= 1.0) {
+              maturity = 1.0;
+              animDirection = -1;
+              pauseHoldTimer = 1.6;
+            } else if (maturity <= 0.0) {
+              maturity = 0.0;
+              animDirection = 1;
+              pauseHoldTimer = 1.1;
+            }
+            updateLabels();
+          }
+        }
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        if (width < 40 || height < 40) {
+          requestAnimationFrame(render);
+          return;
+        }
+        const dpr = window.devicePixelRatio || 1;
+        if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+          resizeCanvas();
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        const maxR = Math.max(40, width * 0.7);
+        if (microscopeMode) {
+          const bgGrad = ctx.createRadialGradient(width * 0.5, height * 0.5, 10, width * 0.5, height * 0.5, maxR);
+          bgGrad.addColorStop(0, '#c6c9c4');
+          bgGrad.addColorStop(1, '#b4b7b2');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, width, height);
+        } else {
+          const bgGrad = ctx.createRadialGradient(width * 0.45, height * 0.5, 10, width * 0.45, height * 0.5, maxR);
+          bgGrad.addColorStop(0, '#131c24');
+          bgGrad.addColorStop(1, '#0b1016');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        const cx = width < 480 ? width * 0.38 : width * 0.44;
+        const cy = height * 0.52;
+        const ascusLength = 220 + 26 * maturity;
+        const uncoil = Math.pow(1.0 - maturity, 1.65);
+        const totalTwistRadians = 3.2 * Math.PI * 2 * uncoil;
+        const sporeStartU = 0.08 - 0.02 * maturity;
+        const sporeEndU = 0.94 + 0.02 * maturity;
+
+        const numSpores = 8;
+        const segmentsPerSpore = 76;
+        const primitives = [];
+
+        const paraphysesConfigs = [
+          { baseAngle: -2.3, dist: 30, heightScale: 1.04, curlDir: 1, phase: 0.2 },
+          { baseAngle: -1.1, dist: 33, heightScale: 0.98, curlDir: -1, phase: 1.4 },
+          { baseAngle: 0.9,  dist: 32, heightScale: 1.05, curlDir: 1, phase: 2.7 },
+          { baseAngle: 2.2,  dist: 29, heightScale: 0.96, curlDir: -1, phase: 4.1 }
+        ];
+
+        paraphysesConfigs.forEach((pCfg) => {
+          const pSegs = 40;
+          const sway = Math.sin(now * 0.0012 + pCfg.phase) * 2.2;
+          let prevPt = null;
+          for (let i = 0; i <= pSegs; i++) {
+            const u = i / pSegs;
+            let py = (0.5 - u) * ascusLength * pCfg.heightScale;
+            let r = pCfg.dist + Math.sin(u * Math.PI * 2 + pCfg.phase) * 3.5 + sway * u;
+            let ang = pCfg.baseAngle + Math.sin(u * Math.PI * 1.5) * 0.15;
+
+            if (u > 0.78) {
+              const tipT = (u - 0.78) / 0.22;
+              const curlAngle = tipT * Math.PI * 1.65 * pCfg.curlDir;
+              r += Math.sin(curlAngle) * 10;
+              py -= (1 - Math.cos(curlAngle)) * 8;
+              ang += tipT * 0.6 * pCfg.curlDir;
+            }
+
+            const px = Math.cos(ang) * r;
+            const pz = Math.sin(ang) * r;
+            const proj = project3D(px, py, pz, cx, cy, zoom);
+
+            if (prevPt) {
+              primitives.push({
+                type: 'paraphysis',
+                p1: prevPt,
+                p2: proj,
+                z: (prevPt.z + proj.z) * 0.5,
+                u: u
+              });
+            }
+            prevPt = proj;
+          }
+        });
+
+        for (let k = 0; k < numSpores; k++) {
+          let prevProj = null;
+
+          const isCentralSlot = (k >= 6);
+          const staggerRank = isCentralSlot ? 0.0 : ((k % 3) + 0.55) / 3.0;
+          const staggerAmt = (sporePackingMode === 1 ? 0.052 : 0.036);
+          const kStartU = (sporeStartU + 0.015) - staggerRank * (staggerAmt * 0.65);
+          const kEndU = (sporeEndU + 0.024) - staggerRank * staggerAmt;
+
+          for (let s = 0; s <= segmentsPerSpore; s++) {
+            const frac = s / segmentsPerSpore;
+            const u = kStartU + frac * (kEndU - kStartU);
+            const y3d = (0.5 - u) * ascusLength;
+
+            const ascusR = getAscusRadius(u, maturity);
+            const wallThickness = 1.1;
+            const lumenR = Math.max(2.0, ascusR - wallThickness);
+
+            const tipFactor = Math.pow(Math.sin(frac * Math.PI), 0.28);
+            const swellMassFactor = 0.92 + 0.16 * Math.pow(maturity, 0.85);
+            const baseThickness = (lumenR * 0.44 * swellMassFactor) * tipFactor;
+            const sporeRadius3D = baseThickness * 0.5;
+
+            const nippleTaper = (u > 0.90) ? Math.max(0.25, 1.0 - (u - 0.90) * 7.5) : 1.0;
+            const maxOuterCenterR = Math.max(0.6, (lumenR - sporeRadius3D * 0.80) * nippleTaper);
+
+            const pos2d = getSporeCrossSectionPos(k, frac, totalTwistRadians, uncoil);
+            const x3d = pos2d.nx * maxOuterCenterR;
+            const z3d = pos2d.nz * maxOuterCenterR;
+
+            const proj = project3D(x3d, y3d, z3d, cx, cy, zoom);
+            proj.thickness = Math.max(1.1, baseThickness * proj.persp);
+
+            if (prevProj) {
+              const isSeptum = (maturity > 0.45) && (s > 6 && s < segmentsPerSpore - 6) && (s % 9 === 0);
+              primitives.push({
+                type: 'sporeSeg',
+                sporeIdx: k,
+                frac: frac,
+                p1: prevProj,
+                p2: proj,
+                z: (prevProj.z + proj.z) * 0.5,
+                isSeptum: isSeptum
+              });
+            }
+            prevProj = proj;
+          }
+        }
+
+        const wallRings = 48;
+        const ringPts = 24;
+        for (let rIdx = 0; rIdx <= wallRings; rIdx++) {
+          const u = rIdx / wallRings;
+          const y3d = (0.5 - u) * ascusLength;
+          const rad = getAscusRadius(u, maturity);
+
+          const isNippleNeck = (rIdx === 44);
+          const isNippleTip = (rIdx === 47);
+
+          if (rIdx % 6 === 0 || isNippleNeck || isNippleTip) {
+            const pts = [];
+            for (let j = 0; j <= ringPts; j++) {
+              const a = (j / ringPts) * Math.PI * 2;
+              const p = project3D(Math.cos(a) * rad, y3d, Math.sin(a) * rad, cx, cy, zoom);
+              pts.push(p);
+            }
+            for (let j = 0; j < ringPts; j++) {
+              primitives.push({
+                type: 'ascusRingSeg',
+                p1: pts[j],
+                p2: pts[j + 1],
+                z: (pts[j].z + pts[j + 1].z) * 0.5,
+                isApicalPore: isNippleTip || isNippleNeck,
+                u: u
+              });
+            }
+          }
+        }
+
+        primitives.sort((a, b) => a.z - b.z);
+
+        drawAscusEnvelope(cx, cy, ascusLength, true);
+
+        for (let i = 0; i < primitives.length; i++) {
+          const item = primitives[i];
+
+          if (item.type === 'paraphysis') {
+            ctx.beginPath();
+            ctx.moveTo(item.p1.sx, item.p1.sy);
+            ctx.lineTo(item.p2.sx, item.p2.sy);
+            ctx.lineWidth = Math.max(1.2, 2.1 * item.p1.persp);
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = microscopeMode ? 'rgba(130, 140, 118, 0.55)' : 'rgba(148, 163, 184, 0.28)';
+            ctx.stroke();
+          } else if (item.type === 'ascusRingSeg') {
+            ctx.beginPath();
+            ctx.moveTo(item.p1.sx, item.p1.sy);
+            ctx.lineTo(item.p2.sx, item.p2.sy);
+            if (item.isApicalPore) {
+              ctx.lineWidth = 1.6;
+              ctx.strokeStyle = microscopeMode ? 'rgba(110, 120, 105, 0.65)' : 'rgba(52, 211, 153, 0.52)';
+            } else {
+              ctx.lineWidth = 0.75;
+              const frontness = Math.max(0, (item.z + 22) / 44);
+              const alpha = 0.05 + 0.12 * frontness;
+              ctx.strokeStyle = microscopeMode ? `rgba(115, 125, 110, ${alpha})` : `rgba(148, 163, 184, ${alpha})`;
+            }
+            ctx.stroke();
+          } else if (item.type === 'sporeSeg') {
+            const { p1, p2, sporeIdx, isSeptum } = item;
+            const depthNorm = Math.max(0, Math.min(1, (item.z + 20) / 40));
+            let alpha = (highlightSingleSpore && sporeIdx !== 0) ? 0.16 : 0.96;
+
+            if (microscopeMode) {
+              const focalVisibility = 0.22 + 0.78 * Math.pow(depthNorm, 1.3);
+              const effAlpha = (highlightSingleSpore && sporeIdx === 0) ? 0.98 : alpha * focalVisibility;
+
+              ctx.beginPath();
+              ctx.moveTo(p1.sx, p1.sy);
+              ctx.lineTo(p2.sx, p2.sy);
+              ctx.lineCap = 'round';
+              ctx.lineWidth = p2.thickness * 1.15;
+              const wallShade = Math.round(88 + depthNorm * 22);
+              ctx.strokeStyle = highlightSingleSpore && sporeIdx === 0
+                ? 'rgba(45, 115, 65, 0.95)'
+                : `rgba(${wallShade}, ${wallShade + 12}, ${wallShade - 6}, ${effAlpha * 0.88})`;
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.moveTo(p1.sx, p1.sy);
+              ctx.lineTo(p2.sx, p2.sy);
+              ctx.lineWidth = Math.max(0.7, p2.thickness * 0.56);
+              ctx.strokeStyle = highlightSingleSpore && sporeIdx === 0
+                ? 'rgba(167, 243, 208, 0.95)'
+                : `rgba(205, 216, 194, ${effAlpha * 0.92})`;
+              ctx.stroke();
+            } else {
+              const pal = sporePalette[sporeIdx % sporePalette.length];
+              const isHero = highlightSingleSpore && sporeIdx === 0;
+              const hue = isHero ? 42 : pal.h;
+              const sat = isHero ? 92 : pal.s;
+              const light = (isHero ? 56 : pal.l) + (depthNorm - 0.5) * 24;
+
+              ctx.beginPath();
+              ctx.moveTo(p1.sx, p1.sy);
+              ctx.lineTo(p2.sx, p2.sy);
+              ctx.lineCap = 'round';
+              ctx.lineWidth = p2.thickness * 1.06;
+              ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${Math.max(12, light - 24)}%, ${alpha * 0.85})`;
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.moveTo(p1.sx, p1.sy);
+              ctx.lineTo(p2.sx, p2.sy);
+              ctx.lineCap = 'round';
+              ctx.lineWidth = p2.thickness * 0.88;
+              ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
+              ctx.stroke();
+
+              if (depthNorm > 0.35 && alpha > 0.4) {
+                ctx.beginPath();
+                ctx.moveTo(p1.sx - 0.5, p1.sy - 0.5);
+                ctx.lineTo(p2.sx - 0.5, p2.sy - 0.5);
+                ctx.lineWidth = Math.max(0.5, p2.thickness * 0.28);
+                ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${Math.min(92, light + 26)}%, ${alpha * 0.7})`;
+                ctx.stroke();
+              }
+
+              if (isSeptum && alpha > 0.3) {
+                const septOpacity = Math.min(1, (maturity - 0.45) / 0.4) * alpha * 0.75;
+                const dx = p2.sx - p1.sx;
+                const dy = p2.sy - p1.sy;
+                const len = Math.hypot(dx, dy) || 1;
+                const nx = (-dy / len) * (p2.thickness * 0.46);
+                const ny = (dx / len) * (p2.thickness * 0.46);
+
+                ctx.beginPath();
+                ctx.moveTo(p2.sx - nx, p2.sy - ny);
+                ctx.lineTo(p2.sx + nx, p2.sy + ny);
+                ctx.lineWidth = 1.1;
+                ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${Math.max(16, light - 28)}%, ${septOpacity})`;
+                ctx.stroke();
+              }
+            }
+          }
+        }
+
+        drawAscusEnvelope(cx, cy, ascusLength, false);
+        drawCrossSectionInset(width, height, totalTwistRadians, uncoil, numSpores);
+
+        requestAnimationFrame(render);
+      }
+
+      function drawAscusEnvelope(cx, cy, ascusLength, isBackPass) {
+        const steps = 80;
+        const leftEdge = [];
+        const rightEdge = [];
+
+        const topPt = project3D(0, -ascusLength * 0.5, 0, cx, cy, zoom);
+        const botPt = project3D(0, ascusLength * 0.5, 0, cx, cy, zoom);
+        const axX = botPt.sx - topPt.sx;
+        const axY = botPt.sy - topPt.sy;
+        const axLen = Math.hypot(axX, axY) || 1;
+        const perpX = -axY / axLen;
+        const perpY = axX / axLen;
+
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const y3d = (0.5 - u) * ascusLength;
+          const r = getAscusRadius(u, maturity);
+          const centerProj = project3D(0, y3d, 0, cx, cy, zoom);
+          const screenR = r * centerProj.persp;
+
+          leftEdge.push({
+            x: centerProj.sx - perpX * screenR,
+            y: centerProj.sy - perpY * screenR
+          });
+          rightEdge.push({
+            x: centerProj.sx + perpX * screenR,
+            y: centerProj.sy + perpY * screenR
+          });
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(leftEdge[0].x, leftEdge[0].y);
+        for (let i = 1; i <= steps; i++) ctx.lineTo(leftEdge[i].x, leftEdge[i].y);
+
+        const topLeft = leftEdge[steps];
+        const topRight = rightEdge[steps];
+        const midTopX = (topLeft.x + topRight.x) * 0.5 - (axX / axLen) * 3.5 * zoom;
+        const midTopY = (topLeft.y + topRight.y) * 0.5 - (axY / axLen) * 3.5 * zoom;
+        ctx.quadraticCurveTo(midTopX, midTopY, topRight.x, topRight.y);
+
+        for (let i = steps - 1; i >= 0; i--) ctx.lineTo(rightEdge[i].x, rightEdge[i].y);
+        ctx.closePath();
+
+        if (isBackPass) {
+          ctx.fillStyle = microscopeMode ? 'rgba(218, 222, 214, 0.38)' : 'rgba(30, 41, 59, 0.45)';
+          ctx.fill();
+        } else {
+          ctx.lineWidth = microscopeMode ? 2.2 : 1.8;
+          ctx.strokeStyle = microscopeMode ? 'rgba(105, 114, 100, 0.78)' : 'rgba(148, 163, 184, 0.48)';
+          ctx.stroke();
+        }
+      }
+
+      function drawCrossSectionInset(width, height, totalTwistRadians, uncoil, numSpores) {
+        const boxW = 144;
+        const boxH = 148;
+        const pad = 12;
+        const bx = width - boxW - pad;
+        const by = pad;
+
+        ctx.save();
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(bx, by, boxW, boxH, 10);
+        } else {
+          ctx.rect(bx, by, boxW, boxH);
+        }
+        ctx.fillStyle = microscopeMode ? 'rgba(212, 216, 208, 0.88)' : 'rgba(15, 23, 42, 0.86)';
+        ctx.strokeStyle = microscopeMode ? 'rgba(110, 118, 105, 0.5)' : 'rgba(51, 65, 85, 0.9)';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = '600 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = microscopeMode ? '#2f352c' : '#e2e8f0';
+        ctx.fillText('Ristlõige (tuub)', bx + boxW * 0.5, by + 19);
+
+        const ccx = bx + boxW * 0.5;
+        const ccy = by + 78;
+        const cupR = 38;
+        const innerLumenR = cupR - 2.0;
+
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, cupR, 0, Math.PI * 2);
+        ctx.fillStyle = microscopeMode ? 'rgba(195, 202, 190, 0.6)' : 'rgba(30, 41, 59, 0.8)';
+        ctx.fill();
+        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = microscopeMode ? 'rgba(105, 115, 100, 0.85)' : 'rgba(148, 163, 184, 0.6)';
+        ctx.stroke();
+
+        // Zero central gap: 6+2 close-packed spores completely fill the cross-section
+        const sporeR = 9.0 + Math.pow(maturity, 0.85) * 2.6;
+        const maxCenterR = Math.max(4, innerLumenR - sporeR * 0.96);
+
+        for (let k = 0; k < numSpores; k++) {
+          const pal = sporePalette[k % sporePalette.length];
+          const isHero = highlightSingleSpore && k === 0;
+          const alpha = (highlightSingleSpore && k !== 0) ? 0.22 : 0.95;
+
+          if (uncoil > 0.03) {
+            ctx.beginPath();
+            for (let step = 0; step <= 10; step++) {
+              const fSlice = 0.46 + (step / 10) * 0.16;
+              const pSlice = getSporeCrossSectionPos(k, fSlice, totalTwistRadians, uncoil);
+              const tx = ccx + pSlice.nx * maxCenterR;
+              const ty = ccy + pSlice.nz * maxCenterR;
+              if (step === 0) ctx.moveTo(tx, ty);
+              else ctx.lineTo(tx, ty);
+            }
+            ctx.lineWidth = sporeR * 1.35;
+            ctx.lineCap = 'round';
+            const hue = isHero ? 42 : pal.h;
+            ctx.strokeStyle = microscopeMode
+              ? `rgba(120, 132, 112, ${0.28 * alpha})`
+              : `hsla(${hue}, 70%, 50%, ${0.25 * alpha})`;
+            ctx.stroke();
+          }
+
+          const posNow = getSporeCrossSectionPos(k, 0.62, totalTwistRadians, uncoil);
+          const sx = ccx + posNow.nx * maxCenterR;
+          const sy = ccy + posNow.nz * maxCenterR;
+
+          ctx.beginPath();
+          ctx.arc(sx, sy, sporeR, 0, Math.PI * 2);
+          if (microscopeMode) {
+            ctx.fillStyle = isHero ? '#34d399' : `rgba(188, 198, 180, ${alpha})`;
+            ctx.strokeStyle = isHero ? '#065f46' : `rgba(88, 98, 82, ${alpha})`;
+          } else {
+            const hue = isHero ? 42 : pal.h;
+            const sat = isHero ? 95 : pal.s;
+            ctx.fillStyle = `hsla(${hue}, ${sat}%, 52%, ${alpha})`;
+            ctx.strokeStyle = `hsla(${hue}, ${sat}%, 26%, ${alpha})`;
+          }
+          ctx.fill();
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx.fill();
+        }
+
+        ctx.font = '11.5px sans-serif';
+        ctx.fillStyle = microscopeMode ? '#3f463b' : '#94a3b8';
+        const capLabels = [
+          '3D-pats (sise↔välis)',
+          'Tihe 6+2 köis',
+          'S-laine (korgitser)',
+          'Tihe 4+4 põiming'
+        ];
+        ctx.fillText(capLabels[sporePackingMode], bx + boxW * 0.5, by + boxH - 9);
+        ctx.restore();
+      }
+
+      updateLabels();
+      updateButtonStyles();
+      requestAnimationFrame(render);
+    })();
+  </script>
+</body>
+</html>
